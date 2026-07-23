@@ -100,10 +100,10 @@ NODE_ENV=production CORS_ORIGIN=https://your-frontend.example npm run start --pr
 | `SUPABASE_SECRET_KEY` | secret / service_role |
 | `VITE_SUPABASE_URL` | тот же URL (нужен на этапе сборки фронта) |
 | `VITE_SUPABASE_ANON_KEY` | тот же anon key |
-| `CORS_ORIGIN` | `https://ИМЯ-СЕРВИСА.onrender.com` |
+| `CORS_ORIGIN` | `https://talent-desk.onrender.com` (без слэша в конце) |
 
-Без `DATABASE_URL` и `DIRECT_URL` шаг `prisma generate` падает.
-Без `VITE_...` сайт соберётся, но вход через Supabase не заработает.
+Render сам даёт `RENDER_EXTERNAL_URL` — сервер тоже разрешает этот адрес.  
+Если в логе было `Not allowed by CORS`, проверь `CORS_ORIGIN` или задеплой свежий `index.js` (ошибка больше не должна ронять запросы с кодом 500).
 
 `PORT` на Render задаётся сам — не трогай.
 

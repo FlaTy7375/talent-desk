@@ -29,19 +29,26 @@ const clientDist = clientDistCandidates.find((dir) =>
   fs.existsSync(path.join(dir, "index.html"))
 );
 
-const allowedOrigins = (process.env.CORS_ORIGIN || "http://localhost:5173,http://localhost:5174")
+const allowedOrigins = (
+  process.env.CORS_ORIGIN ||
+  "http://localhost:5173,http://localhost:5174"
+)
   .split(",")
   .map((origin) => origin.trim())
   .filter(Boolean);
 
+if (process.env.RENDER_EXTERNAL_URL) {
+  allowedOrigins.push(process.env.RENDER_EXTERNAL_URL.replace(/\/$/, ""));
+}
+
 app.use(
   cors({
     origin(origin, callback) {
-      if (!origin || allowedOrigins.includes(origin)) {
+      if (!origin || allowedOrigins.includes(origin) || allowedOrigins.includes("*")) {
         callback(null, true);
         return;
       }
-      callback(new Error("Not allowed by CORS"));
+      callback(null, false);
     },
   })
 );
