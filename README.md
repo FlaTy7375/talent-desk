@@ -109,11 +109,8 @@ NODE_ENV=production CORS_ORIGIN=https://your-frontend.example npm run start --pr
 
 4. **Build Command:** `npm run render:build`  
    **Start Command:** `npm run render:start`  
-   (лишний `npm install;` в начале Render можно убрать — он уже внутри `render:build`)
 
-5. Deploy. Дождись статуса **Live**. Открой `https://ИМЯ.onrender.com/api/health`.
-
-Если лог «замирает» после `added … packages` — подожди ещё 1–3 минуты: качается движок Prisma и собирается фронт. Если красная ошибка — пришли полный текст после этой строки.
+   В `render:build` для клиента стоит `--include=dev`, иначе при `NODE_ENV=production` не ставится Vite и сборка падает с `vite: not found`.
 
 ### 3. Supabase Auth (иначе вход не вернётся на сайт)
 
