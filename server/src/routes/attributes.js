@@ -202,57 +202,49 @@ router.patch("/:id", async (req, res) => {
           ? constraints
           : undefined;
 
-    const result = await prisma.$transaction(async (tx) => {
-      const updated = await tx.attribute.updateMany({
-        where: { id: existing.id, version: Number(version) },
-        data: {
-          name: name !== undefined ? String(name).trim() : undefined,
-          description: description !== undefined ? String(description) : undefined,
-          type: type || undefined,
-          categoryId: categoryId || undefined,
-          ...(constraints !== undefined ? { constraints: constraintsData } : {}),
-          version: { increment: 1 },
-        },
-      });
-
-      if (updated.count === 0) {
-        return { conflict: true };
-      }
-
-
-      if (nextType === "ONE_OF_MANY" && Array.isArray(options)) {
-        await tx.attributeOption.deleteMany({ where: { attributeId: existing.id } });
-        if (options.length) {
-          await tx.attributeOption.createMany({
-            data: options.map((label, index) => ({
-              attributeId: existing.id,
-              label: String(label).trim(),
-              sortOrder: index,
-            })),
-          });
-        }
-      }
-
-      if (nextType !== "ONE_OF_MANY") {
-        await tx.attributeOption.deleteMany({ where: { attributeId: existing.id } });
-      }
-
-      const attribute = await tx.attribute.findUnique({
-        where: { id: existing.id },
-        include: includeAttribute(),
-      });
-      return { attribute };
+    const updated = await prisma.attribute.updateMany({
+      where: { id: existing.id, version: Number(version) },
+      data: {
+        name: name !== undefined ? String(name).trim() : undefined,
+        description: description !== undefined ? String(description) : undefined,
+        type: type || undefined,
+        categoryId: categoryId || undefined,
+        ...(constraints !== undefined ? { constraints: constraintsData } : {}),
+        version: { increment: 1 },
+      },
     });
 
-    if (result.conflict) {
+    if (updated.count === 0) {
       return res.status(409).json({
         error: "Version conflict",
         message: "Attribute was modified by someone else. Reload and retry.",
       });
     }
 
-    await touchRecent(req.user.id, result.attribute.id);
-    res.json({ attribute: result.attribute });
+    if (nextType === "ONE_OF_MANY" && Array.isArray(options)) {
+      await prisma.attributeOption.deleteMany({ where: { attributeId: existing.id } });
+      if (options.length) {
+        await prisma.attributeOption.createMany({
+          data: options.map((label, index) => ({
+            attributeId: existing.id,
+            label: String(label).trim(),
+            sortOrder: index,
+          })),
+        });
+      }
+    }
+
+    if (nextType !== "ONE_OF_MANY") {
+      await prisma.attributeOption.deleteMany({ where: { attributeId: existing.id } });
+    }
+
+    const attribute = await prisma.attribute.findUnique({
+      where: { id: existing.id },
+      include: includeAttribute(),
+    });
+
+    await touchRecent(req.user.id, attribute.id);
+    res.json({ attribute });
   } catch (err) {
     if (err.code === "P2002") {
       return res.status(409).json({ error: "Attribute name must be unique" });

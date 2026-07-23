@@ -74,11 +74,11 @@ function validateBody(body) {
   return null;
 }
 
-async function ensureTags(tx, names) {
+async function ensureTags(db, names) {
   const unique = [...new Set(names.map((name) => String(name).trim()).filter(Boolean))];
   const tags = [];
   for (const name of unique) {
-    const tag = await tx.tag.upsert({
+    const tag = await db.tag.upsert({
       where: { name },
       create: { name },
       update: {},
@@ -215,31 +215,29 @@ router.post("/", ...recruiterOnly, async (req, res) => {
       projectTags,
     } = req.body;
 
-    const position = await prisma.$transaction(async (tx) => {
-      const tags = await ensureTags(tx, projectTags);
-      return tx.position.create({
-        data: {
-          title: title.trim(),
-          shortDescription,
-          company: company?.trim() || null,
-          level: level || null,
-          isPublic: Boolean(isPublic),
-          accessRules: isPublic ? [] : accessRules,
-          maxProjects: Number(maxProjects),
-          imageUrl:
-            typeof imageUrl === "string" && imageUrl.trim() ? imageUrl.trim() : null,
-          attributes: {
-            create: [...new Set(attributeIds)].map((attributeId, index) => ({
-              attributeId,
-              sortOrder: index,
-            })),
-          },
-          projectTags: {
-            create: tags.map((tag) => ({ tagId: tag.id })),
-          },
+    const tags = await ensureTags(prisma, projectTags);
+    const position = await prisma.position.create({
+      data: {
+        title: title.trim(),
+        shortDescription,
+        company: company?.trim() || null,
+        level: level || null,
+        isPublic: Boolean(isPublic),
+        accessRules: isPublic ? [] : accessRules,
+        maxProjects: Number(maxProjects),
+        imageUrl:
+          typeof imageUrl === "string" && imageUrl.trim() ? imageUrl.trim() : null,
+        attributes: {
+          create: [...new Set(attributeIds)].map((attributeId, index) => ({
+            attributeId,
+            sortOrder: index,
+          })),
         },
-        include: positionInclude,
-      });
+        projectTags: {
+          create: tags.map((tag) => ({ tagId: tag.id })),
+        },
+      },
+      include: positionInclude,
     });
 
     res.status(201).json({ position: toDto(position) });
@@ -294,67 +292,64 @@ router.patch("/:id", ...recruiterOnly, async (req, res) => {
       return res.status(400).json({ error: "version is required" });
     }
 
-    const result = await prisma.$transaction(async (tx) => {
-      // Обновляем только если версия совпала, иначе вернём ошибку о версии.
-      const updated = await tx.position.updateMany({
-        where: { id: req.params.id, version: Number(req.body.version) },
-        data: {
-          title: req.body.title.trim(),
-          shortDescription: req.body.shortDescription || "",
-          company: req.body.company?.trim() || null,
-          level: req.body.level || null,
-          isPublic: Boolean(req.body.isPublic),
-          accessRules: req.body.isPublic ? [] : req.body.accessRules,
-          maxProjects: Number(req.body.maxProjects),
-          ...(Object.prototype.hasOwnProperty.call(req.body, "imageUrl")
-            ? {
-                imageUrl:
-                  typeof req.body.imageUrl === "string" && req.body.imageUrl.trim()
-                    ? req.body.imageUrl.trim()
-                    : null,
-              }
-            : {}),
-          version: { increment: 1 },
-        },
-      });
-      if (updated.count === 0) return null;
-
-      await tx.positionAttribute.deleteMany({ where: { positionId: req.params.id } });
-      await tx.positionTag.deleteMany({ where: { positionId: req.params.id } });
-
-      const attributeIds = [...new Set(req.body.attributeIds)];
-      if (attributeIds.length) {
-        await tx.positionAttribute.createMany({
-          data: attributeIds.map((attributeId, index) => ({
-            positionId: req.params.id,
-            attributeId,
-            sortOrder: index,
-          })),
-        });
-      }
-
-      const tags = await ensureTags(tx, req.body.projectTags);
-      if (tags.length) {
-        await tx.positionTag.createMany({
-          data: tags.map((tag) => ({
-            positionId: req.params.id,
-            tagId: tag.id,
-          })),
-        });
-      }
-
-      return tx.position.findUnique({
-        where: { id: req.params.id },
-        include: positionInclude,
-      });
+    // Обновляем только если версия совпала, иначе вернём ошибку о версии.
+    const updated = await prisma.position.updateMany({
+      where: { id: req.params.id, version: Number(req.body.version) },
+      data: {
+        title: req.body.title.trim(),
+        shortDescription: req.body.shortDescription || "",
+        company: req.body.company?.trim() || null,
+        level: req.body.level || null,
+        isPublic: Boolean(req.body.isPublic),
+        accessRules: req.body.isPublic ? [] : req.body.accessRules,
+        maxProjects: Number(req.body.maxProjects),
+        ...(Object.prototype.hasOwnProperty.call(req.body, "imageUrl")
+          ? {
+              imageUrl:
+                typeof req.body.imageUrl === "string" && req.body.imageUrl.trim()
+                  ? req.body.imageUrl.trim()
+                  : null,
+            }
+          : {}),
+        version: { increment: 1 },
+      },
     });
-
-    if (!result) {
+    if (updated.count === 0) {
       return res.status(409).json({
         error: "Version conflict",
         message: "Position was modified by someone else. Reload and retry.",
       });
     }
+
+    await prisma.positionAttribute.deleteMany({ where: { positionId: req.params.id } });
+    await prisma.positionTag.deleteMany({ where: { positionId: req.params.id } });
+
+    const attributeIds = [...new Set(req.body.attributeIds)];
+    if (attributeIds.length) {
+      await prisma.positionAttribute.createMany({
+        data: attributeIds.map((attributeId, index) => ({
+          positionId: req.params.id,
+          attributeId,
+          sortOrder: index,
+        })),
+      });
+    }
+
+    const tags = await ensureTags(prisma, req.body.projectTags);
+    if (tags.length) {
+      await prisma.positionTag.createMany({
+        data: tags.map((tag) => ({
+          positionId: req.params.id,
+          tagId: tag.id,
+        })),
+      });
+    }
+
+    const result = await prisma.position.findUnique({
+      where: { id: req.params.id },
+      include: positionInclude,
+    });
+
     res.json({ position: toDto(result) });
   } catch (err) {
     console.error("PATCH /positions/:id", err);

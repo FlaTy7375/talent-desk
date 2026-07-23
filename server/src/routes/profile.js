@@ -120,12 +120,12 @@ router.post("/avatar", avatarUpload.single("avatar"), async (req, res) => {
   }
 });
 
-async function ensureTags(tx, names) {
+async function ensureTags(db, names) {
   const unique = [...new Set(names.map((name) => String(name).trim()).filter(Boolean))];
   const tags = [];
   for (const name of unique) {
     tags.push(
-      await tx.tag.upsert({
+      await db.tag.upsert({
         where: { name },
         create: { name },
         update: {},
@@ -340,19 +340,17 @@ router.post("/projects", async (req, res) => {
     const owner = await resolveOwner(req, res);
     if (!owner) return;
     if (!req.body.name?.trim()) return res.status(400).json({ error: "name required" });
-    const project = await prisma.$transaction(async (tx) => {
-      const tags = await ensureTags(tx, req.body.tags || []);
-      return tx.project.create({
-        data: {
-          userId: owner.id,
-          name: req.body.name.trim(),
-          periodStart: req.body.periodStart ? new Date(req.body.periodStart) : null,
-          periodEnd: req.body.periodEnd ? new Date(req.body.periodEnd) : null,
-          description: req.body.description || "",
-          tags: { create: tags.map((tag) => ({ tagId: tag.id })) },
-        },
-        include: projectInclude,
-      });
+    const tags = await ensureTags(prisma, req.body.tags || []);
+    const project = await prisma.project.create({
+      data: {
+        userId: owner.id,
+        name: req.body.name.trim(),
+        periodStart: req.body.periodStart ? new Date(req.body.periodStart) : null,
+        periodEnd: req.body.periodEnd ? new Date(req.body.periodEnd) : null,
+        description: req.body.description || "",
+        tags: { create: tags.map((tag) => ({ tagId: tag.id })) },
+      },
+      include: projectInclude,
     });
     res.status(201).json({ project: projectDto(project) });
   } catch (err) {
@@ -366,36 +364,33 @@ router.patch("/projects/:id", async (req, res) => {
     const owner = await resolveOwner(req, res);
     if (!owner) return;
     if (req.body.version == null) return res.status(400).json({ error: "version required" });
-    const project = await prisma.$transaction(async (tx) => {
-      const updated = await tx.project.updateMany({
-        where: {
-          id: req.params.id,
-          userId: owner.id,
-          version: Number(req.body.version),
-        },
-        data: {
-          name: req.body.name?.trim(),
-          periodStart: req.body.periodStart ? new Date(req.body.periodStart) : null,
-          periodEnd: req.body.periodEnd ? new Date(req.body.periodEnd) : null,
-          description: req.body.description || "",
-          version: { increment: 1 },
-        },
-      });
-      if (updated.count === 0) return null;
-
-      await tx.projectTag.deleteMany({ where: { projectId: req.params.id } });
-      const tags = await ensureTags(tx, req.body.tags || []);
-      if (tags.length) {
-        await tx.projectTag.createMany({
-          data: tags.map((tag) => ({ projectId: req.params.id, tagId: tag.id })),
-        });
-      }
-      return tx.project.findUnique({
-        where: { id: req.params.id },
-        include: projectInclude,
-      });
+    const updated = await prisma.project.updateMany({
+      where: {
+        id: req.params.id,
+        userId: owner.id,
+        version: Number(req.body.version),
+      },
+      data: {
+        name: req.body.name?.trim(),
+        periodStart: req.body.periodStart ? new Date(req.body.periodStart) : null,
+        periodEnd: req.body.periodEnd ? new Date(req.body.periodEnd) : null,
+        description: req.body.description || "",
+        version: { increment: 1 },
+      },
     });
-    if (!project) return res.status(409).json({ error: "Version conflict" });
+    if (updated.count === 0) return res.status(409).json({ error: "Version conflict" });
+
+    await prisma.projectTag.deleteMany({ where: { projectId: req.params.id } });
+    const tags = await ensureTags(prisma, req.body.tags || []);
+    if (tags.length) {
+      await prisma.projectTag.createMany({
+        data: tags.map((tag) => ({ projectId: req.params.id, tagId: tag.id })),
+      });
+    }
+    const project = await prisma.project.findUnique({
+      where: { id: req.params.id },
+      include: projectInclude,
+    });
     res.json({ project: projectDto(project) });
   } catch (err) {
     console.error("PATCH /profile/projects", err);
