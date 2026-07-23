@@ -14,6 +14,7 @@ function positionDto(position) {
     company: position.company,
     level: position.level,
     shortDescription: position.shortDescription,
+    imageUrl: position.imageUrl || null,
     updatedAt: position.updatedAt,
     cvCount: position._count.cvs,
   };
