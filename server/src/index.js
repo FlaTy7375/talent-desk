@@ -1,4 +1,6 @@
 import "dotenv/config";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import express from "express";
 import cors from "cors";
 import prisma from "./lib/prisma.js";
@@ -15,6 +17,8 @@ import usersRoutes from "./routes/users.js";
 const app = express();
 const PORT = process.env.PORT || 3001;
 const isProd = process.env.NODE_ENV === "production";
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const clientDist = path.resolve(__dirname, "../../client/dist");
 
 const allowedOrigins = (process.env.CORS_ORIGIN || "http://localhost:5173,http://localhost:5174")
   .split(",")
@@ -65,6 +69,13 @@ app.use("/api/cvs", cvsRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/admin/users", adminUsersRoutes);
 app.use("/api/users", usersRoutes);
+
+if (isProd) {
+  app.use(express.static(clientDist));
+  app.get(/^(?!\/api).*/, (_req, res) => {
+    res.sendFile(path.join(clientDist, "index.html"));
+  });
+}
 
 process.on("unhandledRejection", (reason) => {
   console.error("[unhandledRejection]", reason);

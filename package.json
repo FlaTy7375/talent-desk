@@ -10,7 +10,9 @@
     "build": "npm run build --prefix client",
     "start": "npm run start --prefix server",
     "db:push": "npm run db:push --prefix server",
-    "db:seed": "npm run db:seed --prefix server"
+    "db:seed": "npm run db:seed --prefix server",
+    "render:build": "npm install --prefix server && npm install --prefix client && npx prisma generate --schema=server/prisma/schema.prisma && npm run build --prefix client",
+    "render:start": "npm run start --prefix server"
   },
   "devDependencies": {
     "concurrently": "^9.1.2"

@@ -61,21 +61,71 @@ npm run build --prefix client
 NODE_ENV=production CORS_ORIGIN=https://your-frontend.example npm run start --prefix server
 ```
 
-Раздавайте `client/dist` через nginx/CDN или любой static host. API должен слушать отдельный origin; пропишите его в `CORS_ORIGIN`.
+В production сервер также отдаёт собранный фронт из `client/dist` (удобно для Render).
 
 В production отключены:
 - `POST /api/auth/dev/set-role`
-- страница `/dev/roles` (удалена)
 
 После изменений Prisma остановите сервер и выполните `npx prisma generate` в `server/`.
 
 ---
 
-## Основные возможности
+## Публикация на Render
 
-- OAuth (Google/GitHub) и email-auth, роли Candidate / Recruiter / Admin
-- Библиотека атрибутов (EAV) с optimistic locking
-- Позиции-шаблоны CV, access rules, изображение позиции
-- Профиль, проекты (Markdown + теги), виртуальные CV, PDF + QR
-- Обсуждения, лайки (Recruiter/Admin), FTS-поиск
-- Админ: пользователи, роли, block/unblock
+Нужен аккаунт на [render.com](https://render.com) и репозиторий на GitHub/GitLab.
+
+### 1. Подготовка
+
+1. Залей проект в GitHub (без `.env`).
+2. База уже в Supabase — её Render не нужен.
+3. Локально один раз проверь схему: `cd server && npx prisma db push`.
+
+### 2. Web Service на Render
+
+1. **New +** → **Web Service** → выбери репозиторий.
+2. Настройки:
+   - **Root Directory:** пусто (корень репозитория)
+   - **Runtime:** Node
+   - **Build Command:** `npm run render:build`
+   - **Start Command:** `npm run render:start`
+3. **Environment** (Environment Variables):
+
+| Имя | Значение |
+|-----|----------|
+| `NODE_ENV` | `production` |
+| `DATABASE_URL` | из `server/.env` (pooler) |
+| `DIRECT_URL` | из `server/.env` |
+| `SUPABASE_URL` | URL проекта Supabase |
+| `SUPABASE_ANON_KEY` | anon key |
+| `SUPABASE_SECRET_KEY` | secret / service_role |
+| `VITE_SUPABASE_URL` | тот же URL (нужен на этапе сборки фронта) |
+| `VITE_SUPABASE_ANON_KEY` | тот же anon key |
+| `CORS_ORIGIN` | `https://ИМЯ-СЕРВИСА.onrender.com` |
+
+`PORT` на Render задаётся сам — не трогай.
+
+4. Deploy. Дождись статуса **Live**. Открой `https://ИМЯ.onrender.com/api/health`.
+
+### 3. Supabase Auth (иначе вход не вернётся на сайт)
+
+В Supabase → **Authentication** → **URL Configuration**:
+
+- **Site URL:** `https://ИМЯ.onrender.com`
+- **Redirect URLs:** добавь `https://ИМЯ.onrender.com/auth/callback`
+
+У провайдеров Google/GitHub тоже разреши этот redirect, если спрашивают.
+
+### 4. Seed (по желанию)
+
+После первого деплоя один раз с локальной машины (с теми же `DATABASE_URL`):
+
+```bash
+cd server
+npm run db:seed
+```
+
+### Замечания
+
+- Бесплатный план Render «засыпает» без трафика — первый заход может ждать ~30–60 сек.
+- После смены переменных с `VITE_...` нужен **новый Deploy** (они вшиваются в сборку фронта).
+- Картинки идут в Storage Supabase — buckets `profile-images` и `position-images` должны быть доступны.
