@@ -396,7 +396,16 @@ export default function PositionsPage() {
                             >
                               {position.title}
                             </Link>
-                            <small>
+                            <small
+                              title={
+                                [
+                                  position.company || "—",
+                                  position.shortDescription || "",
+                                ]
+                                  .filter(Boolean)
+                                  .join(" · ")
+                              }
+                            >
                               {position.company || "—"}
                               {position.shortDescription
                                 ? ` · ${position.shortDescription}`

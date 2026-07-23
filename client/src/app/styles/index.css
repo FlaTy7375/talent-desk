@@ -1497,6 +1497,12 @@ a:hover {
   min-width: 720px;
   margin: 0;
   border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.positions-board-table td:has(.positions-board-job) {
+  width: 48%;
+  overflow: hidden;
 }
 
 .positions-board-table thead th {
@@ -1584,11 +1590,14 @@ a:hover {
 .positions-board-job > div {
   display: flex;
   min-width: 0;
+  flex: 1 1 auto;
   flex-direction: column;
   gap: 0.15rem;
+  overflow: hidden;
 }
 
 .positions-board-job a {
+  display: block;
   overflow: hidden;
   color: var(--app-text) !important;
   font-weight: 700;
@@ -1602,6 +1611,7 @@ a:hover {
 }
 
 .positions-board-job small {
+  display: block;
   overflow: hidden;
   color: var(--app-muted);
   font-size: 0.72rem;
