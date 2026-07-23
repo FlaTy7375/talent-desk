@@ -88,7 +88,7 @@ NODE_ENV=production CORS_ORIGIN=https://your-frontend.example npm run start --pr
    - **Runtime:** Node
    - **Build Command:** `npm run render:build`
    - **Start Command:** `npm run render:start`
-3. **Environment** (Environment Variables):
+3. **Environment** (Environment Variables) — добавь **до** первого деплоя:
 
 | Имя | Значение |
 |-----|----------|
@@ -102,9 +102,18 @@ NODE_ENV=production CORS_ORIGIN=https://your-frontend.example npm run start --pr
 | `VITE_SUPABASE_ANON_KEY` | тот же anon key |
 | `CORS_ORIGIN` | `https://ИМЯ-СЕРВИСА.onrender.com` |
 
+Без `DATABASE_URL` и `DIRECT_URL` шаг `prisma generate` падает.
+Без `VITE_...` сайт соберётся, но вход через Supabase не заработает.
+
 `PORT` на Render задаётся сам — не трогай.
 
-4. Deploy. Дождись статуса **Live**. Открой `https://ИМЯ.onrender.com/api/health`.
+4. **Build Command:** `npm run render:build`  
+   **Start Command:** `npm run render:start`  
+   (лишний `npm install;` в начале Render можно убрать — он уже внутри `render:build`)
+
+5. Deploy. Дождись статуса **Live**. Открой `https://ИМЯ.onrender.com/api/health`.
+
+Если лог «замирает» после `added … packages` — подожди ещё 1–3 минуты: качается движок Prisma и собирается фронт. Если красная ошибка — пришли полный текст после этой строки.
 
 ### 3. Supabase Auth (иначе вход не вернётся на сайт)
 
