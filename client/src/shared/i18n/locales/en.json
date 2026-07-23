@@ -1,0 +1,443 @@
+{
+  "appName": "TalentDesk",
+  "common": {
+    "cv": "CV",
+    "yes": "Yes",
+    "no": "No",
+    "loading": "Loading",
+    "cancel": "Cancel",
+    "confirm": "Confirm"
+  },
+  "enums": {
+    "roles": {
+      "CANDIDATE": "Candidate",
+      "RECRUITER": "Recruiter",
+      "ADMIN": "Admin"
+    },
+    "cvStatuses": {
+      "DRAFT": "Draft",
+      "PUBLISHED": "Published"
+    },
+    "positionLevels": {
+      "JUNIOR": "Junior",
+      "MIDDLE": "Middle",
+      "SENIOR": "Senior",
+      "C_LEVEL": "Executive"
+    },
+    "attributeTypes": {
+      "STRING": "Single line",
+      "TEXT": "Text",
+      "IMAGE": "Image",
+      "NUMERIC": "Number",
+      "DATE": "Date",
+      "PERIOD": "Period",
+      "BOOLEAN": "Yes/No",
+      "ONE_OF_MANY": "Dropdown"
+    },
+    "operators": {
+      "eq": "Equals",
+      "contains": "Contains",
+      "gt": "Greater than",
+      "gte": "Greater than or equal",
+      "lt": "Less than",
+      "lte": "Less than or equal"
+    }
+  },
+  "systemAttributes": {
+    "First Name": "First name",
+    "Last Name": "Last name",
+    "Location": "Location",
+    "Personal Photo": "Profile photo"
+  },
+  "systemAttributeDescriptions": {
+    "First Name": "Candidate first name",
+    "Last Name": "Candidate last name",
+    "Location": "City or country",
+    "Personal Photo": "Profile photo in cloud storage"
+  },
+  "systemCategories": {
+    "personal_information": "Personal information",
+    "certification": "Certification",
+    "domain_knowledge": "Domain knowledge",
+    "soft_skills": "Soft skills"
+  },
+  "nav": {
+    "home": "Home",
+    "positions": "Positions",
+    "login": "Sign in",
+    "attributes": "Attributes",
+    "profile": "Profile",
+    "users": "Users",
+    "manage": "Manage"
+  },
+  "auth": {
+    "logout": "Log out",
+    "email": "Email",
+    "role": "Role",
+    "completing": "Completing sign-in…"
+  },
+  "header": {
+    "searchPlaceholder": "Search…",
+    "search": "Search",
+    "searching": "Searching…",
+    "noSuggestions": "No results found",
+    "viewAll": "View all results",
+    "themeLight": "Light",
+    "themeDark": "Dark",
+    "language": "Language",
+    "menu": "Menu"
+  },
+  "home": {
+    "title": "CV Management System",
+    "subtitle": "Positions, reusable profiles, and automatically generated CVs.",
+    "ctaPositions": "Browse positions",
+    "highlightLabel": "Right now",
+    "statistics": "Statistics",
+    "latest": "Latest positions",
+    "popular": "Popular positions",
+    "tagCloud": "Technologies",
+    "tagCloudKicker": "Tags from templates",
+    "searchAll": "Open search",
+    "emptyLatest": "No new positions yet.",
+    "emptyPopular": "No popular positions yet.",
+    "emptyTags": "Tags will appear once templates list technologies.",
+    "stats": {
+      "cvsLast24h": "CVs in the last 24 hours",
+      "totalPositions": "Total positions",
+      "totalCandidates": "Candidates",
+      "totalRecruiters": "Recruiters",
+      "totalCvs": "Total CVs"
+    }
+  },
+  "positions": {
+    "title": "Positions",
+    "kicker": "Jobs and templates",
+    "subtitle": "Manage CV templates, access rules, and the shared position pool.",
+    "subtitleBrowse": "Current openings and CV templates for different roles.",
+    "openings": "Open positions",
+    "createCvHint": "Select a position in the table, then create a CV.",
+    "createCvReady": "Position selected — you can create a CV.",
+    "selectedFocus": "Selected",
+    "guestHint": "Sign in to apply for positions and build your CV.",
+    "guide": {
+      "pick": "Pick a matching position from the list",
+      "create": "Click “Create CV” and fill in the fields",
+      "publish": "Publish the CV when everything is ready",
+      "browse": "Browse available positions and levels",
+      "signIn": "Sign in or create an account",
+      "apply": "Build a CV tailored to the chosen position"
+    },
+    "create": "Create",
+    "createCv": "Create CV",
+    "openCv": "Open CV",
+    "edit": "Edit",
+    "duplicate": "Duplicate",
+    "delete": "Delete",
+    "save": "Save",
+    "cancel": "Cancel",
+    "empty": "No positions found.",
+    "public": "Public",
+    "restricted": "Restricted",
+    "access": "Access",
+    "attributesCount": "Attributes",
+    "version": "Version",
+    "selected": "Selected: {{count}}",
+    "filters": {
+      "all": "All"
+    },
+    "templateData": "Position details",
+    "noDescription": "No position description has been added yet.",
+    "addRule": "Add rule",
+    "removeRule": "Remove rule",
+    "selectAttributesFirst": "Select template attributes first.",
+    "tagsHint": "Comma-separated; tags are created automatically.",
+    "confirmDelete": "Delete selected positions: {{count}}?",
+    "unsavedTitle": "Unsaved changes",
+    "unsavedConfirm": "You have unsaved changes. Close without saving?",
+    "unsavedDiscard": "Close without saving",
+    "unsavedStay": "Keep editing",
+    "exportCsv": "Export CSV",
+    "fields": {
+      "title": "Title",
+      "description": "Short description",
+      "company": "Company",
+      "level": "Level",
+      "maxProjects": "Maximum projects in CV",
+      "image": "Position image",
+      "tags": "Relevant project tags",
+      "attributes": "CV template attributes",
+      "public": "Public position",
+      "rules": "Access rules"
+    },
+    "image": {
+      "choose": "Choose image",
+      "remove": "Remove",
+      "uploading": "Uploading…",
+      "hint": "JPG, PNG or WebP up to 5 MB",
+      "tooLarge": "File is larger than 5 MB"
+    }
+  },
+  "login": {
+    "title": "Welcome back",
+    "registerTitle": "Create your account",
+    "hint": "Sign in with email or a service you trust.",
+    "registerHint": "Enter your details — you can complete the profile later.",
+    "signInTab": "Sign in",
+    "signUpTab": "Register",
+    "name": "Name",
+    "email": "Email",
+    "password": "Password",
+    "placeholders": {
+      "name": "For example, Anna Smith",
+      "email": "name@example.com",
+      "password": "At least 6 characters"
+    },
+    "togglePassword": "Show or hide password",
+    "submit": "Sign in",
+    "registerSubmit": "Create account",
+    "working": "Please wait…",
+    "or": "or continue with",
+    "confirmationSent": "We sent a confirmation link to your email.",
+    "promoTitle": "Everything for your professional profile",
+    "promoText": "Add your experience once and create a relevant CV for every position.",
+    "benefits": {
+      "profile": "One candidate profile",
+      "cv": "CV tailored to each position",
+      "positions": "Current positions and discussions"
+    },
+    "google": "Continue with Google",
+    "github": "Continue with GitHub",
+    "setupHelp": "Enable Google and GitHub in Supabase → Authentication → Providers and add Redirect URL http://localhost:5173/auth/callback"
+  },
+  "errors": {
+    "versionConflict": "Version conflict. Reload the page and try again.",
+    "notFound": "Not found",
+    "forbidden": "Access denied",
+    "unauthorized": "Session expired. Please sign in again.",
+    "signInRequired": "Sign in to view this position",
+    "positionNotAccessible": "This position is not accessible",
+    "storageNotConfigured": "Set SUPABASE_SECRET_KEY in server/.env and restart the server",
+    "chooseImage": "Choose a JPG, PNG, or WebP image",
+    "generic": "Something went wrong"
+  },
+  "notFound": {
+    "title": "Page not found",
+    "back": "Back to home"
+  },
+  "search": {
+    "title": "Full-text search",
+    "eyebrow": "Find fast",
+    "subtitle": "Search positions and published CVs by title, company, and technologies.",
+    "query": "Query",
+    "positions": "Positions",
+    "cvs": "Published CVs",
+    "empty": "Nothing found.",
+    "promptTitle": "Enter a query above",
+    "promptBody": "Try a position title, company name, or tag.",
+    "found": "Found: {{count}}"
+  },
+  "attributes": {
+    "title": "Attribute Library",
+    "eyebrow": "Field templates",
+    "subtitle": "Shared pool for all recruiters. Actions live in the toolbar above the table.",
+    "summary": "Attributes overview",
+    "stats": {
+      "total": "Total",
+      "custom": "Custom",
+      "system": "System",
+      "categories": "Categories"
+    },
+    "create": "Create",
+    "edit": "Edit",
+    "delete": "Delete",
+    "save": "Save",
+    "cancel": "Cancel",
+    "reload": "Reload list",
+    "searchPrefix": "Search by name prefix…",
+    "allCategories": "All categories",
+    "recent": "Recently used",
+    "empty": "No attributes (or filter matches nothing).",
+    "selectAll": "Select all",
+    "systemShort": "System",
+    "version": "Version",
+    "systemHint": "System Me attribute: only description is editable; cannot delete.",
+    "confirmDelete": "Delete selected: {{names}}?",
+    "constraints": {
+      "title": "Field constraints",
+      "hint": "Optional validation rules for values in profiles and CVs.",
+      "required": "Required",
+      "minLength": "Min length",
+      "maxLength": "Max length",
+      "pattern": "Pattern (regex)",
+      "min": "Minimum",
+      "max": "Maximum"
+    },
+    "fields": {
+      "name": "Name",
+      "description": "Description",
+      "category": "Category",
+      "type": "Type",
+      "system": "System",
+      "options": "Dropdown options (one per line)",
+      "optionsPlaceholder": "None\nEssentials\nPro\nExpert"
+    }
+  },
+  "profile": {
+    "title": "Personal profile",
+    "eyebrow": "Workspace",
+    "reload": "Reload",
+    "version": "Version",
+    "adminEditing": "Editing another user’s profile: {{email}}",
+    "backToOwn": "Back to my profile",
+    "sectionHints": {
+      "me": "System profile fields — name, photo, and basics.",
+      "info": "Extra attributes from the shared library.",
+      "projects": "Projects appear in CVs when tags match.",
+      "cvs": "CVs created for selected positions."
+    },
+    "tabs": {
+      "me": "Me",
+      "info": "Info",
+      "projects": "Projects",
+      "cvs": "CVs"
+    },
+    "save": {
+      "idle": "No changes",
+      "dirty": "Unsaved changes",
+      "saving": "Saving…",
+      "saved": "Saved",
+      "conflict": "Saved",
+      "error": "Save error"
+    },
+    "saveNow": "Save",
+    "markdown": {
+      "editor": "Text (Markdown)",
+      "preview": "Preview",
+      "placeholder": "You can use **bold**, lists, and links",
+      "emptyPreview": "Formatted text will appear here"
+    },
+    "conflict": "Data changed in another tab. Reload the profile before retrying.",
+    "info": {
+      "choose": "Choose an attribute from the library",
+      "add": "Add",
+      "remove": "Remove from profile"
+    },
+    "image": {
+      "drop": "Drop your photo here",
+      "hint": "JPG, PNG or WebP up to 5 MB",
+      "choose": "Choose file",
+      "uploading": "Uploading photo…",
+      "remove": "Remove photo",
+      "useUrl": "Or provide a link",
+      "invalidType": "Only JPG, PNG and WebP are supported.",
+      "tooLarge": "The file must not exceed 5 MB.",
+      "authRequired": "Sign in to upload a photo."
+    },
+    "projects": {
+      "create": "Add project",
+      "edit": "Edit",
+      "delete": "Delete",
+      "confirmDelete": "Delete selected project?",
+      "name": "Name",
+      "period": "Period",
+      "from": "From",
+      "to": "To",
+      "tags": "Technologies",
+      "description": "Description (Markdown)",
+      "save": "Save",
+      "cancel": "Cancel",
+      "empty": "No projects yet."
+    },
+    "cvs": {
+      "position": "Position",
+      "status": "Status",
+      "likes": "Likes",
+      "empty": "No CVs yet.",
+      "toPositions": "Browse positions"
+    }
+  },
+  "cv": {
+    "back": "Back to profile",
+    "publish": "Publish",
+    "republish": "Update publication",
+    "publishing": "Publishing CV…",
+    "publishConflict": "The CV changed in another tab. Data was reloaded; publish again.",
+    "delete": "Delete",
+    "confirmDelete": "Delete this CV?",
+    "autosave": "Autosave",
+    "autosaveHint": "You can save manually — autosave also runs in the background",
+    "details": "Professional information",
+    "required": "Required value is missing",
+    "projects": "Relevant projects",
+    "projectFilter": "Position tag filter",
+    "noProjects": "No matching projects.",
+    "like": "Like",
+    "unlike": "Unlike",
+    "downloadPdf": "Download PDF",
+    "qrHint": "QR code link to this CV",
+    "primaryActions": "Primary actions",
+    "tools": "More actions"
+  },
+  "publicProfile": {
+    "title": "Personal page",
+    "eyebrow": "Candidate",
+    "editAsAdmin": "Edit profile",
+    "readOnlyHint": "Read-only view.",
+    "cvsHint": "Published CVs (and drafts for admin/owner).",
+    "emptyInfo": "No additional info fields."
+  },
+  "badges": {
+    "title": "Badges",
+    "earned": "Earned",
+    "progress": "{{value}} / {{threshold}}",
+    "downloadSvg": "Download SVG",
+    "first-project": "First project",
+    "projects-10": "10 projects",
+    "first-cv": "First CV",
+    "cvs-5": "5 CVs",
+    "likes-25": "25 likes"
+  },
+  "discussion": {
+    "back": "Back to positions",
+    "title": "Discussion",
+    "empty": "No posts yet.",
+    "newPost": "New post",
+    "markdown": "Markdown is supported",
+    "send": "Send",
+    "signInPrompt": "Sign in to read the discussion and post messages.",
+    "submittedCvs": "Published CVs",
+    "candidate": "Candidate",
+    "updated": "Updated",
+    "likes": "Likes",
+    "noCvs": "No published CVs yet."
+  },
+  "adminUsers": {
+    "title": "User management",
+    "eyebrow": "Administration",
+    "subtitle": "Roles, blocking, and deletion. Actions live in the shared toolbar above the table.",
+    "summary": "Users overview",
+    "stats": {
+      "total": "Total"
+    },
+    "search": "Search by name or email…",
+    "selectAll": "Select all",
+    "empty": "No users found.",
+    "user": "User",
+    "role": "Role",
+    "status": "Status",
+    "projects": "Projects",
+    "version": "Version",
+    "edit": "Edit",
+    "openProfile": "Profile",
+    "delete": "Delete",
+    "save": "Save",
+    "cancel": "Cancel",
+    "blocked": "Blocked",
+    "blockedHint": "A blocked user will not be able to sign in.",
+    "active": "Active",
+    "you": "You",
+    "conflict": "The user was changed by another administrator. Reload the list.",
+    "confirmDelete": "Delete selected users: {{count}}? This also deletes them from Supabase Auth.",
+    "selfDemoteWarning": "After saving, you will lose access to the admin panel. The specification explicitly allows this."
+  }
+}

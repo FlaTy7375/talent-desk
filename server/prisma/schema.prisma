@@ -1,0 +1,289 @@
+
+
+generator client {
+  provider = "prisma-client-js"
+
+
+  engineType = "binary"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum Role {
+  CANDIDATE
+  RECRUITER
+  ADMIN
+}
+
+enum AttributeType {
+  STRING
+  TEXT
+  IMAGE
+  NUMERIC
+  DATE
+  PERIOD
+  BOOLEAN
+  ONE_OF_MANY
+}
+
+enum CvStatus {
+  DRAFT
+  PUBLISHED
+}
+
+enum PositionLevel {
+  JUNIOR
+  MIDDLE
+  SENIOR
+  C_LEVEL
+}
+
+model User {
+  id         String   @id @default(cuid())
+  supabaseId String   @unique @map("supabase_id")
+  email      String   @unique
+  name       String?
+  avatarUrl  String?  @map("avatar_url")
+  role       Role     @default(CANDIDATE)
+  isBlocked  Boolean  @default(false) @map("is_blocked")
+  version    Int      @default(1)
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+
+  attributeValues AttributeValue[]
+  projects        Project[]
+  cvs             Cv[]
+  discussionPosts DiscussionPost[]
+  likes           Like[]
+  recentAttributes AttributeRecentUse[]
+
+  @@map("users")
+}
+
+model AttributeCategory {
+  id         String      @id @default(cuid())
+
+
+  code       String      @unique
+  name       String      @unique
+  attributes Attribute[]
+
+  @@map("attribute_categories")
+}
+
+model Attribute {
+  id          String            @id @default(cuid())
+  categoryId  String            @map("category_id")
+  category    AttributeCategory @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+
+  name        String            @unique
+  description String            @default("")
+  type        AttributeType
+  isSystem    Boolean           @default(false) @map("is_system")
+
+
+  constraints Json?
+
+
+
+  version     Int               @default(1)
+  createdAt   DateTime          @default(now()) @map("created_at")
+  updatedAt   DateTime          @updatedAt @map("updated_at")
+
+  options           AttributeOption[]
+  values            AttributeValue[]
+  positionAttributes PositionAttribute[]
+  recentUses        AttributeRecentUse[]
+
+  @@map("attributes")
+}
+
+model AttributeRecentUse {
+  userId      String    @map("user_id")
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  attributeId String    @map("attribute_id")
+  attribute   Attribute @relation(fields: [attributeId], references: [id], onDelete: Cascade)
+  usedAt      DateTime  @default(now()) @map("used_at")
+
+  @@id([userId, attributeId])
+  @@index([userId, usedAt])
+  @@map("attribute_recent_uses")
+}
+
+model AttributeOption {
+  id          String    @id @default(cuid())
+  attributeId String    @map("attribute_id")
+  attribute   Attribute @relation(fields: [attributeId], references: [id], onDelete: Cascade)
+  label       String
+  sortOrder   Int       @default(0) @map("sort_order")
+
+  @@unique([attributeId, label])
+  @@map("attribute_options")
+}
+
+model AttributeValue {
+  id          String    @id @default(cuid())
+  userId      String    @map("user_id")
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  attributeId String    @map("attribute_id")
+  attribute   Attribute @relation(fields: [attributeId], references: [id], onDelete: Cascade)
+
+  value       Json
+  version     Int       @default(1)
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  @@unique([userId, attributeId])
+  @@map("attribute_values")
+}
+
+model Project {
+  id          String    @id @default(cuid())
+  userId      String    @map("user_id")
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  name        String
+
+
+  periodStart DateTime? @map("period_start")
+  periodEnd   DateTime? @map("period_end")
+
+  description String    @default("")
+
+  version     Int       @default(1)
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  tags        ProjectTag[]
+
+  @@map("projects")
+}
+
+model Tag {
+  id       String @id @default(cuid())
+  name     String @unique
+
+  projects  ProjectTag[]
+  positions PositionTag[]
+
+  @@map("tags")
+}
+
+model ProjectTag {
+  projectId String  @map("project_id")
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  tagId     String  @map("tag_id")
+  tag       Tag     @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([projectId, tagId])
+  @@map("project_tags")
+}
+
+model Position {
+  id               String         @id @default(cuid())
+  title            String
+  shortDescription String         @default("") @map("short_description")
+
+
+  company          String?
+  level            PositionLevel?
+
+
+
+  isPublic         Boolean        @default(true) @map("is_public")
+
+
+
+  accessRules      Json           @default("[]") @map("access_rules")
+
+
+  maxProjects      Int            @default(3) @map("max_projects")
+
+  imageUrl         String?        @map("image_url")
+
+  version          Int            @default(1)
+  createdAt        DateTime       @default(now()) @map("created_at")
+  updatedAt        DateTime       @updatedAt @map("updated_at")
+
+  attributes       PositionAttribute[]
+
+  projectTags      PositionTag[]
+  cvs              Cv[]
+  discussionPosts  DiscussionPost[]
+
+  @@map("positions")
+}
+
+model PositionAttribute {
+  positionId  String    @map("position_id")
+  position    Position  @relation(fields: [positionId], references: [id], onDelete: Cascade)
+  attributeId String    @map("attribute_id")
+  attribute   Attribute @relation(fields: [attributeId], references: [id], onDelete: Cascade)
+  sortOrder   Int       @default(0) @map("sort_order")
+
+  @@id([positionId, attributeId])
+  @@map("position_attributes")
+}
+
+model PositionTag {
+  positionId String   @map("position_id")
+  position   Position @relation(fields: [positionId], references: [id], onDelete: Cascade)
+  tagId      String   @map("tag_id")
+  tag        Tag      @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([positionId, tagId])
+  @@map("position_tags")
+}
+
+model Cv {
+  id         String   @id @default(cuid())
+  userId     String   @map("user_id")
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  positionId String   @map("position_id")
+  position   Position @relation(fields: [positionId], references: [id], onDelete: Cascade)
+
+  status     CvStatus @default(DRAFT)
+  version    Int      @default(1)
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+  publishedAt DateTime? @map("published_at")
+
+  likes      Like[]
+
+  @@unique([userId, positionId])
+  @@map("cvs")
+}
+
+model DiscussionPost {
+  id         String   @id @default(cuid())
+  positionId String   @map("position_id")
+  position   Position @relation(fields: [positionId], references: [id], onDelete: Cascade)
+  authorId   String   @map("author_id")
+  author     User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+
+  body       String
+  createdAt  DateTime @default(now()) @map("created_at")
+
+
+
+  @@index([positionId, createdAt])
+  @@map("discussion_posts")
+}
+
+model Like {
+  id        String   @id @default(cuid())
+  cvId      String   @map("cv_id")
+  cv        Cv       @relation(fields: [cvId], references: [id], onDelete: Cascade)
+  userId    String   @map("user_id")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now()) @map("created_at")
+
+
+  @@unique([cvId, userId])
+  @@map("likes")
+}
