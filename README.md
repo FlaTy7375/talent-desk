@@ -92,7 +92,7 @@ NODE_ENV=production CORS_ORIGIN=https://your-frontend.example npm run start --pr
 
 | Имя | Значение |
 |-----|----------|
-| `NODE_ENV` | `production` |
+| `NODE_ENV` | `production` (**обязательно**) |
 | `DATABASE_URL` | из `server/.env` (pooler) |
 | `DIRECT_URL` | из `server/.env` |
 | `SUPABASE_URL` | URL проекта Supabase |

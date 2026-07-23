@@ -1,4 +1,5 @@
 import "dotenv/config";
+import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import express from "express";
@@ -18,7 +19,15 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 const isProd = process.env.NODE_ENV === "production";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const clientDist = path.resolve(__dirname, "../../client/dist");
+
+const clientDistCandidates = [
+  path.resolve(__dirname, "../../client/dist"),
+  path.resolve(process.cwd(), "../client/dist"),
+  path.resolve(process.cwd(), "client/dist"),
+];
+const clientDist = clientDistCandidates.find((dir) =>
+  fs.existsSync(path.join(dir, "index.html"))
+);
 
 const allowedOrigins = (process.env.CORS_ORIGIN || "http://localhost:5173,http://localhost:5174")
   .split(",")
@@ -43,6 +52,7 @@ app.get("/api/health", (_req, res) => {
     ok: true,
     message: "TalentDesk API is running",
     time: new Date().toISOString(),
+    clientDist: Boolean(clientDist),
   });
 });
 
@@ -70,11 +80,16 @@ app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/admin/users", adminUsersRoutes);
 app.use("/api/users", usersRoutes);
 
-if (isProd) {
-  app.use(express.static(clientDist));
-  app.get(/^(?!\/api).*/, (_req, res) => {
+if (clientDist) {
+  app.use(express.static(clientDist, { index: false, fallthrough: true }));
+  app.get(/^(?!\/api)(?!.*\.\w+$).*/, (_req, res) => {
     res.sendFile(path.join(clientDist, "index.html"));
   });
+} else {
+  console.warn(
+    "client/dist не найден. Проверенные пути:",
+    clientDistCandidates.join(" | ")
+  );
 }
 
 process.on("unhandledRejection", (reason) => {
@@ -86,4 +101,7 @@ process.on("uncaughtException", (err) => {
 
 app.listen(PORT, () => {
   console.log(`Server listening on http://localhost:${PORT}`);
+  if (clientDist) {
+    console.log(`Static files: ${clientDist}`);
+  }
 });
