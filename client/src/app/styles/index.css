@@ -2899,10 +2899,12 @@ code {
   margin-top: 0.25rem;
 }
 
-.position-hero p {
+.position-hero__description {
   max-width: 780px;
   margin: 0.75rem 0 1rem;
   color: var(--app-muted);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 
 .position-meta {

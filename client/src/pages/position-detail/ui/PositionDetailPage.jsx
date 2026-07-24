@@ -175,7 +175,9 @@ export default function PositionDetailPage() {
         <div className="position-hero__content">
           <span className="position-hero__company">{position.company || "—"}</span>
           <h1>{position.title}</h1>
-          <p>{position.shortDescription || t("positions.noDescription")}</p>
+          <p className="position-hero__description">
+            {position.shortDescription || t("positions.noDescription")}
+          </p>
           <div className="position-meta">
             {position.level && (
               <span>
