@@ -113,6 +113,7 @@ router.get("/available-positions", async (req, res) => {
           where: { userId: req.user.id },
           select: { id: true, status: true },
         },
+        _count: { select: { cvs: true } },
       },
     });
     const result = [];
@@ -128,7 +129,7 @@ router.get("/available-positions", async (req, res) => {
           isPublic: position.isPublic,
           version: position.version,
           attributes: [],
-          cvCount: position.cvs.length,
+          cvCount: position._count.cvs,
           existingCv: position.cvs[0] || null,
         });
       }
