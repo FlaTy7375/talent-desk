@@ -123,6 +123,7 @@ router.get("/available-positions", async (req, res) => {
           title: position.title,
           company: position.company,
           shortDescription: position.shortDescription,
+          imageUrl: position.imageUrl || null,
           level: position.level,
           isPublic: position.isPublic,
           version: position.version,
