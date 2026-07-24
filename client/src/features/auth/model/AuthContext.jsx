@@ -6,6 +6,7 @@ import {
   useState,
 } from "react";
 import { supabase } from "../../../shared/api/supabase";
+import { translateAuthError } from "./translateAuthError";
 
 const AuthContext = createContext(null);
 
@@ -110,7 +111,7 @@ export function AuthProvider({ children }) {
       provider: "google",
       options: { redirectTo: `${window.location.origin}/auth/callback` },
     });
-    if (oauthError) setError(oauthError.message);
+    if (oauthError) setError(translateAuthError(oauthError));
   }
 
   async function loginWithGithub() {
@@ -119,7 +120,7 @@ export function AuthProvider({ children }) {
       provider: "github",
       options: { redirectTo: `${window.location.origin}/auth/callback` },
     });
-    if (oauthError) setError(oauthError.message);
+    if (oauthError) setError(translateAuthError(oauthError));
   }
 
   async function loginWithEmail(email, password) {
@@ -129,7 +130,7 @@ export function AuthProvider({ children }) {
       password,
     });
     if (emailError) {
-      setError(emailError.message);
+      setError(translateAuthError(emailError));
       throw emailError;
     }
     return data;
@@ -146,7 +147,7 @@ export function AuthProvider({ children }) {
       },
     });
     if (emailError) {
-      setError(emailError.message);
+      setError(translateAuthError(emailError));
       throw emailError;
     }
     return { ...data, needsConfirmation: !data.session };

@@ -207,7 +207,24 @@
     },
     "google": "Continue with Google",
     "github": "Continue with GitHub",
-    "setupHelp": "Enable Google and GitHub in Supabase → Authentication → Providers and add Redirect URL http://localhost:5173/auth/callback"
+    "setupHelp": "Enable Google and GitHub in Supabase → Authentication → Providers and add Redirect URL http://localhost:5173/auth/callback",
+    "errors": {
+      "generic": "Sign-in failed. Please try again.",
+      "invalidCredentials": "Invalid email or password.",
+      "emailNotConfirmed": "Confirm your email — we sent you a link.",
+      "userExists": "An account with this email already exists.",
+      "weakPassword": "Password is too weak. Use at least 6 characters.",
+      "emailRateLimit": "Too many emails sent. Wait about an hour or sign in with Google/GitHub.",
+      "rateLimit": "Too many attempts. Please wait and try again.",
+      "signupDisabled": "Registration is temporarily disabled.",
+      "userBanned": "This account is banned.",
+      "validation": "Check the entered details and try again.",
+      "samePassword": "New password must be different from the current one.",
+      "providerDisabled": "This sign-in method is disabled.",
+      "oauthFailed": "Could not sign in with the external provider. Try again.",
+      "invalidEmail": "Enter a valid email address.",
+      "network": "Network error. Check your connection and try again."
+    }
   },
   "errors": {
     "versionConflict": "Version conflict. Reload the page and try again.",

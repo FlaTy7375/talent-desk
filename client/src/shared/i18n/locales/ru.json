@@ -207,7 +207,24 @@
     },
     "google": "Войти через Google",
     "github": "Войти через GitHub",
-    "setupHelp": "Нужно включить Google и GitHub в Supabase → Authentication → Providers и добавить Redirect URL http://localhost:5173/auth/callback"
+    "setupHelp": "Нужно включить Google и GitHub в Supabase → Authentication → Providers и добавить Redirect URL http://localhost:5173/auth/callback",
+    "errors": {
+      "generic": "Не удалось выполнить вход. Попробуйте ещё раз.",
+      "invalidCredentials": "Неверный email или пароль.",
+      "emailNotConfirmed": "Подтвердите email — мы отправили письмо со ссылкой.",
+      "userExists": "Пользователь с таким email уже зарегистрирован.",
+      "weakPassword": "Пароль слишком простой. Используйте не меньше 6 символов.",
+      "emailRateLimit": "Слишком много писем подряд. Подождите около часа или войдите через Google/GitHub.",
+      "rateLimit": "Слишком много попыток. Подождите немного и повторите.",
+      "signupDisabled": "Регистрация временно отключена.",
+      "userBanned": "Этот аккаунт заблокирован.",
+      "validation": "Проверьте правильность введённых данных.",
+      "samePassword": "Новый пароль должен отличаться от текущего.",
+      "providerDisabled": "Этот способ входа отключён.",
+      "oauthFailed": "Не удалось войти через внешний сервис. Попробуйте ещё раз.",
+      "invalidEmail": "Укажите корректный email.",
+      "network": "Ошибка сети. Проверьте интернет и попробуйте снова."
+    }
   },
   "errors": {
     "versionConflict": "Конфликт версии. Перезагрузите страницу и повторите.",
