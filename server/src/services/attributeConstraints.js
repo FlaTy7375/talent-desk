@@ -1,10 +1,11 @@
 // Проверяем ограничения поля: длина, шаблон, минимум и максимум.
-export function validateAttributeValue(attribute, value) {
+// allowEmpty — для профиля: поле можно добавить пустым и заполнить позже.
+export function validateAttributeValue(attribute, value, { allowEmpty = false } = {}) {
   const constraints = attribute?.constraints;
   if (!constraints || typeof constraints !== "object") return null;
 
   if (value === null || value === undefined || value === "") {
-    if (constraints.required) return "Value is required";
+    if (constraints.required && !allowEmpty) return "Value is required";
     return null;
   }
 

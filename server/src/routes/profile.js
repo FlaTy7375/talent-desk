@@ -237,7 +237,9 @@ router.put("/attributes/:attributeId", async (req, res) => {
     });
     if (!attribute) return res.status(404).json({ error: "Attribute not found" });
 
-    const constraintError = validateAttributeValue(attribute, req.body.value);
+    const constraintError = validateAttributeValue(attribute, req.body.value, {
+      allowEmpty: true,
+    });
     if (constraintError) {
       return res.status(400).json({ error: constraintError });
     }

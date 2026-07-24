@@ -81,6 +81,7 @@ export default function ProfilePage() {
   const [projectModal, setProjectModal] = useState(false);
   const [editingProject, setEditingProject] = useState(null);
   const [selectedProjectId, setSelectedProjectId] = useState(null);
+  const [addAttributeId, setAddAttributeId] = useState("");
 
 
   useEffect(() => {
@@ -478,22 +479,38 @@ export default function ProfilePage() {
 
             {activeTab === "info" && (
               <div className="profile-add">
-                <select className="form-select" id="add-info-attribute" defaultValue="">
-                  <option value="">{t("profile.info.choose")}</option>
-                  {availableToAdd.map((attribute) => (
-                    <option key={attribute.id} value={attribute.id}>
-                      {attributeLabel(t, attribute)} (
-                      {enumLabel(t, "attributeTypes", attribute.type)})
-                    </option>
-                  ))}
-                </select>
+                <div className="profile-add__picker" role="listbox" aria-label={t("profile.info.choose")}>
+                  {!availableToAdd.length ? (
+                    <p className="profile-add__empty">{t("profile.info.choose")}</p>
+                  ) : (
+                    availableToAdd.map((attribute) => (
+                      <button
+                        type="button"
+                        key={attribute.id}
+                        role="option"
+                        aria-selected={addAttributeId === attribute.id}
+                        className={`profile-add__option${
+                          addAttributeId === attribute.id ? " is-active" : ""
+                        }`}
+                        onClick={() => setAddAttributeId(attribute.id)}
+                      >
+                        <span>{attributeLabel(t, attribute)}</span>
+                        <small>
+                          {enumLabel(t, "attributeTypes", attribute.type)}
+                        </small>
+                      </button>
+                    ))
+                  )}
+                </div>
                 <button
                   type="button"
                   className="btn btn-outline-primary"
-                  onClick={() => {
-                    const select = document.getElementById("add-info-attribute");
-                    addInfo(select.value);
-                    select.value = "";
+                  disabled={!addAttributeId}
+                  onClick={async () => {
+                    const id = addAttributeId;
+                    if (!id) return;
+                    await addInfo(id);
+                    setAddAttributeId("");
                   }}
                 >
                   <i className="bi bi-plus-lg" aria-hidden="true" />

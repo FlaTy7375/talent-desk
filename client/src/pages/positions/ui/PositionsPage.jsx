@@ -238,7 +238,12 @@ export default function PositionsPage() {
               {enumLabel(t, "positionLevels", focusedPosition.level)}
             </small>
             {focusedPosition.shortDescription && (
-              <p>{focusedPosition.shortDescription}</p>
+              <p
+                className="positions-board__focus-desc"
+                title={focusedPosition.shortDescription}
+              >
+                {focusedPosition.shortDescription}
+              </p>
             )}
           </div>
         )}
