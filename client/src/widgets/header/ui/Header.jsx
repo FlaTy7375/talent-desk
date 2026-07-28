@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { useTheme } from "../../../features/theme";
 import { useAuth } from "../../../features/auth";
 import UserAvatar from "../../../entities/user/ui/UserAvatar";
+import { enumLabel } from "../../../shared/i18n/labels";
 import SearchSuggestions from "./SearchSuggestions";
 import { buildNavItems, buildManageItems } from "../model/navConfig";
 import { useHeaderSearch } from "../model/useHeaderSearch";
