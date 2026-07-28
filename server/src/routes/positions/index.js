@@ -1,92 +1,23 @@
-import { randomUUID } from "crypto";
 import { Router } from "express";
 import multer from "multer";
-import prisma from "../lib/prisma.js";
-import { optionalAuth, requireAuth, requireRole } from "../middleware/auth.js";
-import { canAccessPosition } from "../services/positionAccess.js";
-import { attachResolvedAvatars } from "../services/avatar.js";
-import { supabaseAdmin } from "../lib/supabase.js";
+import prisma from "../../lib/prisma.js";
+import { ensureTags } from "../../lib/tags.js";
+import { optionalAuth, requireAuth, requireRole } from "../../middleware/auth.js";
+import { canAccessPosition } from "../../services/positionAccess.js";
+import { attachResolvedAvatars } from "../../services/avatar.js";
+import {
+  POSITION_INCLUDE,
+  toDto,
+  validatePositionBody,
+} from "../../services/positionDto.js";
+import { uploadPositionImage } from "../../services/positionImage.js";
 
 const router = Router();
 const recruiterOnly = [requireAuth, requireRole("RECRUITER", "ADMIN")];
-const LEVELS = ["JUNIOR", "MIDDLE", "SENIOR", "C_LEVEL"];
-const POSITION_IMAGE_BUCKET = "position-images";
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 5 * 1024 * 1024 },
 });
-
-async function ensurePositionImageBucket() {
-  if (!supabaseAdmin) {
-    const err = new Error("Storage is not configured");
-    err.code = "STORAGE_NOT_CONFIGURED";
-    throw err;
-  }
-  const existing = await supabaseAdmin.storage.getBucket(POSITION_IMAGE_BUCKET);
-  if (!existing.error) return;
-  const created = await supabaseAdmin.storage.createBucket(POSITION_IMAGE_BUCKET, {
-    public: true,
-    fileSizeLimit: 5 * 1024 * 1024,
-    allowedMimeTypes: ["image/jpeg", "image/png", "image/webp"],
-  });
-  if (created.error && !created.error.message.toLowerCase().includes("already exists")) {
-    throw created.error;
-  }
-}
-
-const positionInclude = {
-  attributes: {
-    orderBy: { sortOrder: "asc" },
-    include: {
-      attribute: {
-        include: {
-          category: true,
-          options: { orderBy: { sortOrder: "asc" } },
-        },
-      },
-    },
-  },
-  projectTags: {
-    include: { tag: true },
-  },
-  _count: { select: { cvs: true } },
-};
-
-function toDto(position) {
-  return {
-    ...position,
-    attributes: position.attributes.map((item) => item.attribute),
-    projectTags: position.projectTags.map((item) => item.tag),
-    cvCount: position._count?.cvs ?? 0,
-    _count: undefined,
-  };
-}
-
-function validateBody(body) {
-  if (!body.title?.trim()) return "title is required";
-  if (body.level && !LEVELS.includes(body.level)) return "invalid level";
-  if (!Number.isInteger(Number(body.maxProjects)) || Number(body.maxProjects) < 0) {
-    return "maxProjects must be a non-negative integer";
-  }
-  if (!Array.isArray(body.attributeIds)) return "attributeIds[] is required";
-  if (!Array.isArray(body.projectTags)) return "projectTags[] is required";
-  if (!Array.isArray(body.accessRules)) return "accessRules[] is required";
-  return null;
-}
-
-async function ensureTags(db, names) {
-  const unique = [...new Set(names.map((name) => String(name).trim()).filter(Boolean))];
-  const tags = [];
-  for (const name of unique) {
-    const tag = await db.tag.upsert({
-      where: { name },
-      create: { name },
-      update: {},
-    });
-    tags.push(tag);
-  }
-  return tags;
-}
 
 router.get("/", async (req, res) => {
   try {
@@ -94,12 +25,10 @@ router.get("/", async (req, res) => {
     const positions = await prisma.position.findMany({
       where: {
         isPublic: true,
-        ...(q
-          ? { title: { contains: q, mode: "insensitive" } }
-          : {}),
+        ...(q ? { title: { contains: q, mode: "insensitive" } } : {}),
       },
       orderBy: { updatedAt: "desc" },
-      include: positionInclude,
+      include: POSITION_INCLUDE,
     });
     res.json({ positions: positions.map(toDto) });
   } catch (err) {
@@ -112,7 +41,7 @@ router.get("/manage", ...recruiterOnly, async (_req, res) => {
   try {
     const positions = await prisma.position.findMany({
       orderBy: { updatedAt: "desc" },
-      include: positionInclude,
+      include: POSITION_INCLUDE,
     });
     res.json({ positions: positions.map(toDto) });
   } catch (err) {
@@ -125,7 +54,7 @@ router.get("/:id/view", optionalAuth, async (req, res) => {
   try {
     const position = await prisma.position.findUnique({
       where: { id: req.params.id },
-      include: positionInclude,
+      include: POSITION_INCLUDE,
     });
     if (!position) return res.status(404).json({ error: "Not found" });
     const manager = req.user?.role === "RECRUITER" || req.user?.role === "ADMIN";
@@ -199,7 +128,7 @@ router.post("/:id/discussion", requireAuth, async (req, res) => {
 
 router.post("/", ...recruiterOnly, async (req, res) => {
   try {
-    const validationError = validateBody(req.body);
+    const validationError = validatePositionBody(req.body);
     if (validationError) return res.status(400).json({ error: validationError });
 
     const {
@@ -237,7 +166,7 @@ router.post("/", ...recruiterOnly, async (req, res) => {
           create: tags.map((tag) => ({ tagId: tag.id })),
         },
       },
-      include: positionInclude,
+      include: POSITION_INCLUDE,
     });
 
     res.status(201).json({ position: toDto(position) });
@@ -251,7 +180,7 @@ router.post("/:id/duplicate", ...recruiterOnly, async (req, res) => {
   try {
     const source = await prisma.position.findUnique({
       where: { id: req.params.id },
-      include: positionInclude,
+      include: POSITION_INCLUDE,
     });
     if (!source) return res.status(404).json({ error: "Not found" });
 
@@ -275,7 +204,7 @@ router.post("/:id/duplicate", ...recruiterOnly, async (req, res) => {
           create: source.projectTags.map((item) => ({ tagId: item.tagId })),
         },
       },
-      include: positionInclude,
+      include: POSITION_INCLUDE,
     });
     res.status(201).json({ position: toDto(copy) });
   } catch (err) {
@@ -286,13 +215,12 @@ router.post("/:id/duplicate", ...recruiterOnly, async (req, res) => {
 
 router.patch("/:id", ...recruiterOnly, async (req, res) => {
   try {
-    const validationError = validateBody(req.body);
+    const validationError = validatePositionBody(req.body);
     if (validationError) return res.status(400).json({ error: validationError });
     if (req.body.version == null) {
       return res.status(400).json({ error: "version is required" });
     }
 
-    // Обновляем только если версия совпала, иначе вернём ошибку о версии.
     const updated = await prisma.position.updateMany({
       where: { id: req.params.id, version: Number(req.body.version) },
       data: {
@@ -347,7 +275,7 @@ router.patch("/:id", ...recruiterOnly, async (req, res) => {
 
     const result = await prisma.position.findUnique({
       where: { id: req.params.id },
-      include: positionInclude,
+      include: POSITION_INCLUDE,
     });
 
     res.json({ position: toDto(result) });
@@ -363,7 +291,6 @@ router.post(
   upload.single("image"),
   async (req, res) => {
     try {
-      // Загружаем картинку позиции в хранилище и сохраняем ссылку.
       const position = await prisma.position.findUnique({ where: { id: req.params.id } });
       if (!position) return res.status(404).json({ error: "Not found" });
       if (!req.file) {
@@ -373,29 +300,8 @@ router.post(
         return res.status(400).json({ error: "Choose a JPG, PNG, or WebP image" });
       }
 
-      await ensurePositionImageBucket();
-      const extension = req.file.mimetype.split("/")[1].replace("jpeg", "jpg");
-      const path = `${position.id}/${randomUUID()}.${extension}`;
-      const uploaded = await supabaseAdmin.storage
-        .from(POSITION_IMAGE_BUCKET)
-        .upload(path, req.file.buffer, {
-          contentType: req.file.mimetype,
-          cacheControl: "31536000",
-          upsert: false,
-        });
-      if (uploaded.error) throw uploaded.error;
-
-      const { data } = supabaseAdmin.storage
-        .from(POSITION_IMAGE_BUCKET)
-        .getPublicUrl(path);
-
-      const updated = await prisma.position.update({
-        where: { id: position.id },
-        data: { imageUrl: data.publicUrl, version: { increment: 1 } },
-        include: positionInclude,
-      });
-
-      res.status(201).json({ url: data.publicUrl, position: toDto(updated) });
+      const result = await uploadPositionImage(position.id, req.file);
+      res.status(201).json(result);
     } catch (err) {
       if (err.code === "STORAGE_NOT_CONFIGURED") {
         return res.status(503).json({ error: err.message });

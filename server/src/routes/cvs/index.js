@@ -1,108 +1,22 @@
 import { Router } from "express";
+import prisma from "../../lib/prisma.js";
+import { requireAuth } from "../../middleware/auth.js";
+import { canAccessPosition } from "../../services/positionAccess.js";
+import { buildCv } from "../../services/cvBuilder.js";
+import {
+  enrichPublishedCvs,
+  escapeCsv,
+  getPublishedAccessibleCvs,
+} from "../../services/cvPublishedList.js";
 import { Prisma } from "@prisma/client";
-import prisma from "../lib/prisma.js";
-import { requireAuth } from "../middleware/auth.js";
 import {
-  canAccessPosition,
-  evaluatePositionAccess,
-  isFilled,
-} from "../services/positionAccess.js";
-import {
-  attachResolvedAvatars,
   maybeSyncAvatarFromAttribute,
-} from "../services/avatar.js";
-import { maybeSyncDisplayName, attachResolvedDisplayNames } from "../services/displayName.js";
-import { validateAttributeValue } from "../services/attributeConstraints.js";
+} from "../../services/avatar.js";
+import { maybeSyncDisplayName } from "../../services/displayName.js";
+import { validateAttributeValue } from "../../services/attributeConstraints.js";
 
 const router = Router();
 router.use(requireAuth);
-
-const positionInclude = {
-  attributes: {
-    orderBy: { sortOrder: "asc" },
-    include: {
-      attribute: {
-        include: {
-          category: true,
-          options: { orderBy: { sortOrder: "asc" } },
-        },
-      },
-    },
-  },
-  projectTags: { include: { tag: true } },
-};
-
-// Собираем резюме из профиля и шаблона позиции — своих копий полей нет.
-async function buildCv(cvId) {
-  const cv = await prisma.cv.findUnique({
-    where: { id: cvId },
-    include: {
-      user: { select: { id: true, name: true, email: true, avatarUrl: true } },
-      position: { include: positionInclude },
-      _count: { select: { likes: true } },
-    },
-  });
-  if (!cv) return null;
-
-  await Promise.all([
-    attachResolvedDisplayNames([cv.user]),
-    attachResolvedAvatars([cv.user]),
-  ]);
-
-  const attributeIds = cv.position.attributes.map((item) => item.attributeId);
-  const values = await prisma.attributeValue.findMany({
-    where: { userId: cv.userId, attributeId: { in: attributeIds } },
-  });
-  const valueMap = new Map(values.map((item) => [item.attributeId, item]));
-
-  const attributes = cv.position.attributes.map((item) => {
-    const stored = valueMap.get(item.attributeId);
-    return {
-      attribute: item.attribute,
-      value: stored?.value ?? null,
-      valueVersion: stored?.version ?? null,
-      filled: isFilled(stored?.value),
-    };
-  });
-
-  const requiredTags = cv.position.projectTags.map((item) => item.tag.name);
-  const projects = await prisma.project.findMany({
-    where: {
-      userId: cv.userId,
-      ...(requiredTags.length
-        ? { tags: { some: { tag: { name: { in: requiredTags } } } } }
-        : {}),
-    },
-    orderBy: [{ periodEnd: "desc" }, { createdAt: "desc" }],
-    take: cv.position.maxProjects,
-    include: { tags: { include: { tag: true } } },
-  });
-
-  return {
-    id: cv.id,
-    status: cv.status,
-    version: cv.version,
-    createdAt: cv.createdAt,
-    updatedAt: cv.updatedAt,
-    publishedAt: cv.publishedAt,
-    likes: cv._count.likes,
-    user: cv.user,
-    position: {
-      id: cv.position.id,
-      title: cv.position.title,
-      company: cv.position.company,
-      shortDescription: cv.position.shortDescription,
-      maxProjects: cv.position.maxProjects,
-      projectTags: requiredTags,
-    },
-    attributes,
-    projects: projects.map((project) => ({
-      ...project,
-      tags: project.tags.map((link) => link.tag.name),
-    })),
-    complete: attributes.every((item) => item.filled),
-  };
-}
 
 router.get("/available-positions", async (req, res) => {
   try {
@@ -151,42 +65,8 @@ router.get("/position/:positionId", async (req, res) => {
     });
     if (!position) return res.status(404).json({ error: "Position not found" });
 
-    const cvs = await prisma.cv.findMany({
-      where: { positionId: position.id, status: "PUBLISHED" },
-      orderBy: { updatedAt: "desc" },
-      include: {
-        user: { select: { id: true, name: true, email: true, avatarUrl: true } },
-        _count: { select: { likes: true } },
-      },
-    });
-
-    let accessibleIds = new Set(cvs.map((cv) => cv.userId));
-    if (!position.isPublic) {
-      const rules = Array.isArray(position.accessRules) ? position.accessRules : [];
-      const attributeIds = [...new Set(rules.map((rule) => rule.attributeId))];
-      const userIds = cvs.map((cv) => cv.userId);
-      const values = await prisma.attributeValue.findMany({
-        where: { userId: { in: userIds }, attributeId: { in: attributeIds } },
-      });
-      const maps = new Map();
-      for (const value of values) {
-        if (!maps.has(value.userId)) maps.set(value.userId, new Map());
-        maps.get(value.userId).set(value.attributeId, value.value);
-      }
-      accessibleIds = new Set(
-        cvs
-          .filter((cv) =>
-            evaluatePositionAccess(position, maps.get(cv.userId) || new Map())
-          )
-          .map((cv) => cv.userId)
-      );
-    }
-
-    const published = cvs.filter((cv) => accessibleIds.has(cv.userId));
-    await Promise.all([
-      attachResolvedAvatars(published.map((cv) => cv.user)),
-      attachResolvedDisplayNames(published.map((cv) => cv.user)),
-    ]);
+    const published = await getPublishedAccessibleCvs(position);
+    await enrichPublishedCvs(published);
 
     const liked = await prisma.like.findMany({
       where: {
@@ -223,47 +103,11 @@ router.get("/position/:positionId/export.csv", async (req, res) => {
     });
     if (!position) return res.status(404).json({ error: "Position not found" });
 
-    const cvs = await prisma.cv.findMany({
-      where: { positionId: position.id, status: "PUBLISHED" },
-      orderBy: { updatedAt: "desc" },
-      include: {
-        user: { select: { id: true, name: true, email: true, avatarUrl: true } },
-        _count: { select: { likes: true } },
-      },
-    });
+    const published = await getPublishedAccessibleCvs(position);
+    await enrichPublishedCvs(published, { avatars: false });
 
-    let accessibleIds = new Set(cvs.map((cv) => cv.userId));
-    if (!position.isPublic) {
-      const rules = Array.isArray(position.accessRules) ? position.accessRules : [];
-      const attributeIds = [...new Set(rules.map((rule) => rule.attributeId))];
-      const userIds = cvs.map((cv) => cv.userId);
-      const values = await prisma.attributeValue.findMany({
-        where: { userId: { in: userIds }, attributeId: { in: attributeIds } },
-      });
-      const maps = new Map();
-      for (const value of values) {
-        if (!maps.has(value.userId)) maps.set(value.userId, new Map());
-        maps.get(value.userId).set(value.attributeId, value.value);
-      }
-      accessibleIds = new Set(
-        cvs
-          .filter((cv) =>
-            evaluatePositionAccess(position, maps.get(cv.userId) || new Map())
-          )
-          .map((cv) => cv.userId)
-      );
-    }
-
-    const published = cvs.filter((cv) => accessibleIds.has(cv.userId));
-    await attachResolvedDisplayNames(published.map((cv) => cv.user));
-
-    const escape = (value) => {
-      const text = value == null ? "" : String(value);
-      if (/[",\n]/.test(text)) return `"${text.replace(/"/g, '""')}"`;
-      return text;
-    };
     const lines = [
-      ["name", "email", "likes", "updatedAt", "position"].map(escape).join(","),
+      ["name", "email", "likes", "updatedAt", "position"].map(escapeCsv).join(","),
       ...published.map((cv) =>
         [
           cv.user.name || "",
@@ -272,7 +116,7 @@ router.get("/position/:positionId/export.csv", async (req, res) => {
           cv.updatedAt?.toISOString?.() || cv.updatedAt || "",
           position.title || "",
         ]
-          .map(escape)
+          .map(escapeCsv)
           .join(",")
       ),
     ];
@@ -282,7 +126,6 @@ router.get("/position/:positionId/export.csv", async (req, res) => {
       "Content-Disposition",
       `attachment; filename="position-${position.id}-cvs.csv"`
     );
-    // Метка в начале файла, чтобы таблица открылась с русскими буквами.
     res.send("\uFEFF" + lines.join("\n"));
   } catch (err) {
     console.error("GET /cvs/position/:positionId/export.csv", err);
@@ -328,8 +171,6 @@ router.get("/:id", async (req, res) => {
     if (isRecruiter && !isOwner && cv.status !== "PUBLISHED") {
       return res.status(404).json({ error: "CV not found" });
     }
-
-
 
     if (!isManager) {
       const position = await prisma.position.findUnique({
@@ -460,7 +301,6 @@ router.put("/:id/attributes/:attributeId", async (req, res) => {
         });
       } catch (err) {
         if (err.code !== "P2002") throw err;
-
       }
     }
 
@@ -480,7 +320,6 @@ router.put("/:id/attributes/:attributeId", async (req, res) => {
       data: { value, version: { increment: 1 } },
     });
     if (!updated.count) {
-      // Версия не совпала — всё равно сохраняем последние данные.
       await prisma.attributeValue.update({
         where: { id: row.id },
         data: { value, version: { increment: 1 } },
@@ -523,7 +362,6 @@ router.post("/:id/publish", async (req, res) => {
       },
     });
     if (!updated.count) {
-      // Версия не совпала — всё равно публикуем актуальные данные.
       await prisma.cv.update({
         where: { id: cv.id },
         data: {

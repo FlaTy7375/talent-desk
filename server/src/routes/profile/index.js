@@ -1,16 +1,24 @@
 import { Router } from "express";
-import { Prisma } from "@prisma/client";
 import multer from "multer";
 import { randomUUID } from "node:crypto";
-import prisma from "../lib/prisma.js";
-import { supabaseAdmin } from "../lib/supabase.js";
-import { requireAuth } from "../middleware/auth.js";
+import prisma from "../../lib/prisma.js";
+import { ensureTags } from "../../lib/tags.js";
+import { supabaseAdmin } from "../../lib/supabase.js";
+import { requireAuth } from "../../middleware/auth.js";
 import {
   maybeSyncAvatarFromAttribute,
   upsertPersonalPhotoValue,
-} from "../services/avatar.js";
-import { maybeSyncDisplayName } from "../services/displayName.js";
-import { validateAttributeValue } from "../services/attributeConstraints.js";
+} from "../../services/avatar.js";
+import { maybeSyncDisplayName } from "../../services/displayName.js";
+import { validateAttributeValue } from "../../services/attributeConstraints.js";
+import { resolveOwner } from "../../services/profileOwner.js";
+import {
+  ATTRIBUTE_INCLUDE,
+  PROJECT_INCLUDE,
+  buildBadges,
+  jsonValue,
+  projectDto,
+} from "../../services/profileDto.js";
 
 const router = Router();
 router.use(requireAuth);
@@ -22,58 +30,6 @@ const avatarUpload = multer({
     done(null, ["image/jpeg", "image/png", "image/webp"].includes(file.mimetype));
   },
 });
-
-const attributeInclude = {
-  category: true,
-  options: { orderBy: { sortOrder: "asc" } },
-};
-
-const projectInclude = {
-  tags: { include: { tag: true } },
-};
-
-function projectDto(project) {
-  return {
-    ...project,
-    tags: project.tags.map((link) => link.tag.name),
-  };
-}
-
-function jsonValue(value) {
-  return value === null || value === undefined ? Prisma.JsonNull : value;
-}
-
-async function resolveOwner(req, res) {
-  const requested = String(req.query.userId || req.body?.ownerId || "").trim();
-  if (!requested || requested === req.user.id) {
-    return {
-      id: req.user.id,
-      email: req.user.email,
-      name: req.user.name,
-      avatarUrl: req.user.avatarUrl,
-      version: req.user.version,
-    };
-  }
-  if (req.user.role !== "ADMIN") {
-    res.status(403).json({ error: "Only admin can edit another profile" });
-    return null;
-  }
-  const user = await prisma.user.findUnique({
-    where: { id: requested },
-    select: {
-      id: true,
-      email: true,
-      name: true,
-      avatarUrl: true,
-      version: true,
-    },
-  });
-  if (!user) {
-    res.status(404).json({ error: "User not found" });
-    return null;
-  }
-  return user;
-}
 
 router.post("/avatar", avatarUpload.single("avatar"), async (req, res) => {
   try {
@@ -120,21 +76,6 @@ router.post("/avatar", avatarUpload.single("avatar"), async (req, res) => {
   }
 });
 
-async function ensureTags(db, names) {
-  const unique = [...new Set(names.map((name) => String(name).trim()).filter(Boolean))];
-  const tags = [];
-  for (const name of unique) {
-    tags.push(
-      await db.tag.upsert({
-        where: { name },
-        create: { name },
-        update: {},
-      })
-    );
-  }
-  return tags;
-}
-
 router.get("/", async (req, res) => {
   try {
     const owner = await resolveOwner(req, res);
@@ -145,16 +86,16 @@ router.get("/", async (req, res) => {
         prisma.attribute.findMany({
           where: { isSystem: true },
           orderBy: { name: "asc" },
-          include: attributeInclude,
+          include: ATTRIBUTE_INCLUDE,
         }),
         prisma.attributeValue.findMany({
           where: { userId: owner.id },
-          include: { attribute: { include: attributeInclude } },
+          include: { attribute: { include: ATTRIBUTE_INCLUDE } },
         }),
         prisma.project.findMany({
           where: { userId: owner.id },
           orderBy: [{ periodEnd: "desc" }, { createdAt: "desc" }],
-          include: projectInclude,
+          include: PROJECT_INCLUDE,
         }),
         prisma.cv.findMany({
           where: { userId: owner.id },
@@ -167,7 +108,7 @@ router.get("/", async (req, res) => {
         prisma.attribute.findMany({
           where: { isSystem: false },
           orderBy: { name: "asc" },
-          include: attributeInclude,
+          include: ATTRIBUTE_INCLUDE,
         }),
         prisma.tag.findMany({
           orderBy: { name: "asc" },
@@ -205,17 +146,7 @@ router.get("/", async (req, res) => {
       projects: projects.map(projectDto),
       cvs,
       tagSuggestions: tagSuggestions.map((tag) => tag.name),
-      badges: [
-        { id: "first-project", title: "First Project", threshold: 1, value: projectCount, icon: "kanban" },
-        { id: "projects-10", title: "10 Projects", threshold: 10, value: projectCount, icon: "collection" },
-        { id: "first-cv", title: "First CV", threshold: 1, value: cvCount, icon: "file-earmark-person" },
-        { id: "cvs-5", title: "5 CVs", threshold: 5, value: cvCount, icon: "files" },
-        { id: "likes-25", title: "25 Likes", threshold: 25, value: likeTotal, icon: "heart" },
-      ].map((rule) => ({
-        ...rule,
-        earned: rule.value >= rule.threshold,
-        progress: Math.min(100, Math.round((rule.value / rule.threshold) * 100)),
-      })),
+      badges: buildBadges({ projectCount, cvCount, likeTotal }),
       permissions: {
         canEdit: true,
         isAdminView: owner.id !== req.user.id,
@@ -295,7 +226,6 @@ router.put("/attributes/:attributeId", async (req, res) => {
       },
     });
     if (updated.count === 0) {
-      // Версия не совпала — всё равно пишем последние данные.
       await prisma.attributeValue.update({
         where: { id: row.id },
         data: {
@@ -352,7 +282,7 @@ router.post("/projects", async (req, res) => {
         description: req.body.description || "",
         tags: { create: tags.map((tag) => ({ tagId: tag.id })) },
       },
-      include: projectInclude,
+      include: PROJECT_INCLUDE,
     });
     res.status(201).json({ project: projectDto(project) });
   } catch (err) {
@@ -391,7 +321,7 @@ router.patch("/projects/:id", async (req, res) => {
     }
     const project = await prisma.project.findUnique({
       where: { id: req.params.id },
-      include: projectInclude,
+      include: PROJECT_INCLUDE,
     });
     res.json({ project: projectDto(project) });
   } catch (err) {

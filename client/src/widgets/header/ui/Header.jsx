@@ -3,9 +3,10 @@ import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "../../../features/theme";
 import { useAuth } from "../../../features/auth";
-import { apiFetch } from "../../../shared/api/api";
-import { enumLabel } from "../../../shared/i18n/labels";
 import UserAvatar from "../../../entities/user/ui/UserAvatar";
+import SearchSuggestions from "./SearchSuggestions";
+import { buildNavItems, buildManageItems } from "../model/navConfig";
+import { useHeaderSearch } from "../model/useHeaderSearch";
 
 export default function Header() {
   const { t, i18n } = useTranslation();
@@ -15,52 +16,21 @@ export default function Header() {
   const location = useLocation();
   const menuId = useId();
   const [menuOpen, setMenuOpen] = useState(false);
-  const [query, setQuery] = useState("");
-  const [suggestions, setSuggestions] = useState({ positions: [], cvs: [] });
-  const [suggestionsOpen, setSuggestionsOpen] = useState(false);
-  const [suggestionsLoading, setSuggestionsLoading] = useState(false);
   const searchRef = useRef(null);
+
+  const {
+    query,
+    setQuery,
+    suggestions,
+    suggestionsOpen,
+    setSuggestionsOpen,
+    suggestionsLoading,
+  } = useHeaderSearch(accessToken);
 
   useEffect(() => {
     setMenuOpen(false);
     setSuggestionsOpen(false);
   }, [location.pathname]);
-
-  useEffect(() => {
-    const q = query.trim();
-    if (q.length < 2) {
-      setSuggestions({ positions: [], cvs: [] });
-      setSuggestionsLoading(false);
-      return;
-    }
-
-    let cancelled = false;
-    setSuggestionsLoading(true);
-    const timer = setTimeout(() => {
-      apiFetch(`/api/dashboard/search?q=${encodeURIComponent(q)}`, {
-        token: accessToken || undefined,
-      })
-        .then((data) => {
-          if (!cancelled) {
-            setSuggestions({
-              positions: (data.positions || []).slice(0, 5),
-              cvs: (data.cvs || []).slice(0, 3),
-            });
-          }
-        })
-        .catch(() => {
-          if (!cancelled) setSuggestions({ positions: [], cvs: [] });
-        })
-        .finally(() => {
-          if (!cancelled) setSuggestionsLoading(false);
-        });
-    }, 300);
-
-    return () => {
-      cancelled = true;
-      clearTimeout(timer);
-    };
-  }, [query, accessToken]);
 
   useEffect(() => {
     function closeOnOutsideClick(event) {
@@ -91,26 +61,8 @@ export default function Header() {
     i18n.changeLanguage(lng);
   }
 
-  const navItems = [
-    { to: "/", label: t("nav.home"), icon: "bi-grid-1x2", end: true },
-    { to: "/positions", label: t("nav.positions"), icon: "bi-briefcase" },
-  ];
-
-  const manageItems = [];
-  if (user && (user.role === "RECRUITER" || user.role === "ADMIN")) {
-    manageItems.push({
-      to: "/attributes",
-      label: t("nav.attributes"),
-      icon: "bi-sliders2",
-    });
-  }
-  if (user?.role === "ADMIN") {
-    manageItems.push({
-      to: "/admin/users",
-      label: t("nav.users"),
-      icon: "bi-people",
-    });
-  }
+  const navItems = buildNavItems(t);
+  const manageItems = buildManageItems(t, user);
 
   const headerBusy = manageItems.length > 0;
   const manageActive = manageItems.some(
@@ -237,90 +189,13 @@ export default function Header() {
                 <i className="bi bi-arrow-right" aria-hidden="true" />
               </button>
 
-              {suggestionsOpen && query.trim().length >= 2 && (
-                <div className="search-suggestions">
-                  {suggestionsLoading ? (
-                    <div className="search-suggestions__loading" aria-label={t("header.searching")}>
-                      {[0, 1, 2].map((item) => (
-                        <span key={item} />
-                      ))}
-                    </div>
-                  ) : (
-                    <>
-                      {suggestions.positions.length > 0 && (
-                        <div className="suggestion-group">
-                          <div className="suggestion-group__title">{t("search.positions")}</div>
-                          {suggestions.positions.map((position) => (
-                            <Link
-                              className="suggestion-item"
-                              to={`/positions/${position.id}`}
-                              onClick={() => setSuggestionsOpen(false)}
-                              key={position.id}
-                            >
-                              <span className="suggestion-item__icon">
-                                <i className="bi bi-briefcase" aria-hidden="true" />
-                              </span>
-                              <span className="suggestion-item__copy">
-                                <strong>{position.title}</strong>
-                                <small>
-                                  {[
-                                    position.company,
-                                    position.level
-                                      ? enumLabel(t, "positionLevels", position.level)
-                                      : null,
-                                  ]
-                                    .filter(Boolean)
-                                    .join(" · ")}
-                                </small>
-                              </span>
-                              <i className="bi bi-chevron-right" aria-hidden="true" />
-                            </Link>
-                          ))}
-                        </div>
-                      )}
-
-                      {suggestions.cvs.length > 0 && (
-                        <div className="suggestion-group">
-                          <div className="suggestion-group__title">{t("search.cvs")}</div>
-                          {suggestions.cvs.map((cv) => (
-                            <Link
-                              className="suggestion-item"
-                              to={`/cvs/${cv.id}`}
-                              onClick={() => setSuggestionsOpen(false)}
-                              key={cv.id}
-                            >
-                              <span className="suggestion-item__icon">
-                                <i className="bi bi-file-earmark-person" aria-hidden="true" />
-                              </span>
-                              <span className="suggestion-item__copy">
-                                <strong>{cv.candidate.name || cv.candidate.email}</strong>
-                                <small>{cv.position.title}</small>
-                              </span>
-                              <i className="bi bi-chevron-right" aria-hidden="true" />
-                            </Link>
-                          ))}
-                        </div>
-                      )}
-
-                      {!suggestions.positions.length && !suggestions.cvs.length && (
-                        <div className="search-suggestions__empty">
-                          <i className="bi bi-search" aria-hidden="true" />
-                          {t("header.noSuggestions")}
-                        </div>
-                      )}
-                    </>
-                  )}
-
-                  <Link
-                    className="search-suggestions__all"
-                    to={`/search?q=${encodeURIComponent(query.trim())}`}
-                    onClick={() => setSuggestionsOpen(false)}
-                  >
-                    {t("header.viewAll")}
-                    <i className="bi bi-arrow-right" aria-hidden="true" />
-                  </Link>
-                </div>
-              )}
+              <SearchSuggestions
+                query={query}
+                suggestions={suggestions}
+                suggestionsOpen={suggestionsOpen}
+                suggestionsLoading={suggestionsLoading}
+                onClose={() => setSuggestionsOpen(false)}
+              />
             </form>
 
             <div className="app-header__tools">
